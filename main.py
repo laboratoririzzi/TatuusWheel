@@ -52,7 +52,7 @@ class SPageFileStatic(Structure):
 
 	def toDict(self):
 		return {
-			str(self.track) + "|" + str(self.maxRpm)
+			str(self.maxRpm)
 		}
 
 class SPageFileGraphic(Structure):
@@ -116,7 +116,7 @@ class SPageFileGraphic(Structure):
 
 	def toDict(self):
 		return {
-			#str(self.bestTime) + "|" + str(self.lastTime),
+			str(self.bestTime) + "|" + str(self.lastTime),
 		}
 
 class SPageFilePhysics(Structure):
@@ -210,7 +210,7 @@ class SPageFilePhysics(Structure):
 
 	def toDict(self):
 		return {
-			str(self.rpms),
+			str(self.gear) + "|" + f'{self.performanceMeter:.3f}' + "|" + str(self.rpms),
 		}
 
 def read_physics():
@@ -235,8 +235,8 @@ print("pronto a ricevere")
 while True:
 	s_p = "|".join(read_physics())
 	s_s = "|".join(read_static())
-	#s_g = "|".join(read_graphics())
-	dataStr = "|" + s_p + "|" + s_s + "|"
+	s_g = "|".join(read_graphics())
+	dataStr = "|" + s_p + "|" + s_s + "|" + s_g +  "|"
 	arduino.write(str(dataStr).encode('utf-8'))
 	print(dataStr)
 	time.sleep(0.2)
