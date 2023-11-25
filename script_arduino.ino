@@ -24,29 +24,58 @@ int thresholdsArray[ledNumPlus1] = {88, 90, 92, 94, 95, thresholdBlink};
 // define variable for buttons
 unsigned long timeSinceLastClick = 0;
 int timeThresholdButton = 600;
-int n1 = 0;
-int n2 = 0;
+
+// bool for button release
 bool button1WasReleased = true;
 bool button2WasReleased = true;
 
+// bool used in display cancellation
+bool hasJustChangedMenu0 = true;
+bool hasJustChangedMenu1 = true;
+
 // define array of delimiters included 0
-int const numOfVar = 3;
+int const numOfVar = 6;
 int delimiters[numOfVar + 1]; 
 
-// 
+// gear variables
 int gear = 1;
 int prewGear = 1;
+
+// percentage of rpms
 int percInt;
+
+// text size
+int textSizeGear = 7;
+int textSizeTime = 4;
+int textSizeDelta = 4;
+
+// gear pos
+int gearX = 40;
+int gearY = 40;
+
+// delta pos
+int deltaX = 200;
+int deltaY = 140;
+
+// times pos
+int bestTimeX = 250;
+int bestTimeY = 40;
+int lastTimeX = 250;
+int lastTimeY = 100;
+
+// declare strings
+String delta;
+String deltaPrew;
+String bestTime;
+String bestTimePrew;
+String lastTime;
+String lastTimePrew;
 String dataString, rpm, rpmMax;
 String gears[8] = {"R", "N", "1", "2", "3", "4", "5", "6"};
 
-// 
+// menu variables
 int menuPage = 0;
 int maxMenuPage = 2;
-// 
-int textSize = 7;
-int xC = 40;
-int yC = 40;
 
 // define tft
 ILI9488 tft = ILI9488(TFT_CS, TFT_DC, TFT_RST);
@@ -69,23 +98,21 @@ void setup() {
   tft.setRotation(1);
   tft.fillScreen(ILI9488_BLACK);
 
-  // set al led to off
+  // set al leds to off
   for (int i = 0; i < ledNum; i++) {
     digitalWrite(led[i], LOW);
   }
 
-  // set all led to on
+  // set all leds to on
   for (int i = 0; i < ledNum; i++) {
     digitalWrite(led[i], HIGH);
     delay(300);
   }
 
-  // set al led to off
+  // set all leds to off
   for (int i = 0; i < ledNum; i++) {
       digitalWrite(led[i], LOW);
   }
-
-  textPrint("N", xC, yC, textSize, ILI9488_WHITE);
 
 }
 
@@ -95,15 +122,20 @@ void loop() {
   while(Serial.available() > 0) {
     String dataString = Serial.readString();
     dataString.trim();
+    // unpack all data
     delimiters[0] = dataString.indexOf("|");
     for (int i = 1; i < ( numOfVar + 1); i++) {
       delimiters[i] = dataString.indexOf("|", delimiters[i - 1] + 1);
     }
+    // assign to correct variable the unpacked data
     gear = (dataString.substring(delimiters[0] + 1, delimiters[1])).toInt();
-    rpm = dataString.substring(delimiters[1] + 1, delimiters[2]);
-    rpmMax = dataString.substring(delimiters[2] + 1, delimiters[3]);
+    delta = dataString.substring(delimiters[1] + 1, delimiters[2]);
+    rpm = dataString.substring(delimiters[2] + 1, delimiters[3]);
+    rpmMax = dataString.substring(delimiters[3] + 1, delimiters[4]);
+    bestTime = dataString.substring(delimiters[4] + 1, delimiters[5]);
+    lastTime = dataString.substring(delimiters[5] + 1, delimiters[6]);
+    //compute percentage
     percInt = (rpm.toInt() * 100 ) / rpmMax.toInt();
-
     // led on-off
     if(percInt <= thresholdBlink) {
       comparator(led, percInt, thresholdsArray);
@@ -118,8 +150,9 @@ void loop() {
     // timeSinceLastClick is to avoid a multiple click in a limited part of time, buttonWasReleased is necessary to avoid click before releasing the button
     if(millis() - timeSinceLastClick > timeThresholdButton && button1WasReleased == true) {
       button1WasReleased = false;
-      if(menuPage > 0) {
+      if(menuPage > -1) {
         menuPage -= 1;
+        hasJustChangedMenu0 = true;
       }
       delay(1); // this delay is necessary to avoid double increment of n1
       timeSinceLastClick = millis();
@@ -136,34 +169,78 @@ void loop() {
       button2WasReleased = false;
       if(menuPage < (maxMenuPage - 1)){
         menuPage += 1;
+        hasJustChangedMenu1 = true;
       }
       delay(1);
       timeSinceLastClick = millis();
     }
   }
- 
+
   else if(digitalRead(button2) == HIGH) {
       button2WasReleased = true;
   }
 
-  if(menuPage == 0) {
-    if ( gear == 1 && (prewGear == 0 || prewGear == 2 ) ) {
-      textClear(gears[prewGear], xC, yC, textSize, ILI9488_BLACK);
-      textPrint("N", xC, yC, textSize, ILI9488_WHITE);
-      prewGear = gear;
-      delay(1);
-    }
+  // the concept to clean the screen is rewrite in black the same value and after that write in white the new value, in this way I use a lot less cpu
+  if ( gear == 1 && (prewGear == 0 || prewGear == 2 ) ) {
+    textPrint(gears[prewGear], gearX, gearY, textSizeGear, ILI9488_BLACK);
+    textPrint("N", gearX, gearY, textSizeGear, ILI9488_WHITE);
+    prewGear = gear;
+    delay(1);
+  }
       
-    else if (gear != 1 && gear != prewGear && (prewGear != 0 || prewGear != 2 )) {
-      textClear(gears[prewGear], xC, yC, textSize, ILI9488_BLACK);
-      textPrint(gears[gear], xC, yC, textSize, ILI9488_WHITE);
-      prewGear = gear;
-      delay(1);
+  else if (gear != 1 && gear != prewGear && (prewGear != 0 || prewGear != 2 )) {
+    textPrint(gears[prewGear], gearX, gearY, textSizeGear, ILI9488_BLACK);
+    textPrint(gears[gear], gearX, gearY, textSizeGear, ILI9488_WHITE);
+    prewGear = gear;
+    delay(1);
+  }
+
+  if(menuPage == 0) {
+    // first time after changing menu I need to clean all the old data, in this case I remove deltaPrew and after I write best time and lastTime
+    if( hasJustChangedMenu1 == true ) {
+      textPrint(deltaPrew, deltaX, deltaY, textSizeDelta, ILI9488_BLACK);
+      textPrint(bestTime, bestTimeX, bestTimeY, textSizeTime, ILI9488_WHITE);
+      textPrint(lastTime, lastTimeX, lastTimeY, textSizeTime, ILI9488_WHITE);
+      hasJustChangedMenu1 = false;
+    }
+
+    // in the other situation I clean only the old value, in this case I clean the prewious best time and I write the new best time
+    if(bestTime != bestTimePrew) {
+      textPrint(bestTimePrew, bestTimeX, bestTimeY, textSizeTime, ILI9488_BLACK);
+      textPrint(bestTime, bestTimeX, bestTimeY, textSizeTime, ILI9488_WHITE);
+      bestTimePrew = bestTime;
+    }
+
+    if(lastTime != lastTimePrew) {
+      textPrint(lastTimePrew, lastTimeX, lastTimeY, textSizeTime, ILI9488_BLACK);
+      textPrint(lastTime, lastTimeX, lastTimeY, textSizeTime, ILI9488_WHITE);
+      lastTimePrew = lastTime;
     }
   }
 
   else if(menuPage == 1) {
-    tft.fillScreen(ILI9488_RED);
+    if( hasJustChangedMenu0 == true ) {
+      textPrint(bestTimePrew, bestTimeX, bestTimeY, textSizeTime, ILI9488_BLACK);
+      textPrint(lastTimePrew, lastTimeX, lastTimeY, textSizeTime, ILI9488_BLACK);
+      if(delta.charAt(0) == '-') {
+        textPrint(delta, deltaX, deltaY, textSizeDelta, ILI9488_GREEN);
+      }
+      else{
+        textPrint(delta, deltaX, deltaY, textSizeDelta, ILI9488_RED);
+      }
+      hasJustChangedMenu0 = false;
+    }
+
+    if( delta != deltaPrew ){
+      textPrint(deltaPrew, deltaX, deltaY, 4, ILI9488_BLACK);
+      if(delta.charAt(0) == '-') {
+        textPrint(delta, deltaX, deltaY, 4, ILI9488_GREEN);
+      }
+      else{
+        textPrint(delta, deltaX, deltaY, 4, ILI9488_RED);
+      }
+      deltaPrew = delta;
+    }
   }
 }
 
@@ -180,7 +257,7 @@ void comparator(int l[], int perc, int thresholds[]) {
   }
 }
 
-// function used to blink, first arg is array of led, second arg is the number of led
+// function used to blink, first arg is array of led, second arg is the number of led and the third is time between blink
 void blink(int b[], int ledNum, int time) {
   for (int i = 0; i < ledNum; i++) {
     digitalWrite(b[i], HIGH);
@@ -193,13 +270,7 @@ void blink(int b[], int ledNum, int time) {
   delay(time);
 }
 
-void textClear(String text, int x, int y, int size, int color) {
-  tft.setCursor(x, y);
-  tft.setTextColor(color);
-  tft.setTextSize(size);
-  tft.println(text);
-}
-
+// function to write text, the args are the string, the coordinates, the size and the color
 void textPrint(String text, int x, int y, int size, int color) {
   tft.setCursor(x, y);
   tft.setTextColor(color);
