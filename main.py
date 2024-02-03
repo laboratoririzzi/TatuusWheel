@@ -116,7 +116,7 @@ class SPageFileGraphic(Structure):
 
 	def toDict(self):
 		return {
-			str(self.bestTime) + "|" + str(self.lastTime),
+			str(self.bestTime) + "|" + str(self.lastTime) + "|" + str(self.position),
 		}
 
 class SPageFilePhysics(Structure):
@@ -210,7 +210,7 @@ class SPageFilePhysics(Structure):
 
 	def toDict(self):
 		return {
-			str(self.gear) + "|" + f'{self.performanceMeter:.3f}' + "|" + str(self.rpms),
+			str(self.gear) + "|" + f'{self.performanceMeter:.3f}' + "|"  + str(self.fuel) + "|" + str(self.rpms),
 		}
 
 def read_physics():
