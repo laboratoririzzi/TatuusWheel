@@ -30,11 +30,10 @@ bool button1WasReleased = true;
 bool button2WasReleased = true;
 
 // bool used in display cancellation
-bool hasJustChangedMenu0 = true;
-bool hasJustChangedMenu1 = true;
+bool hasJustChangedMenu = true;
 
 // define array of delimiters included 0
-int const numOfVar = 6;
+int const numOfVar = 8;
 int delimiters[numOfVar + 1]; 
 
 // gear variables
@@ -48,6 +47,8 @@ int percInt;
 int textSizeGear = 7;
 int textSizeTime = 4;
 int textSizeDelta = 4;
+int textSizeFuel = 4;
+int textSizePosition = 6;
 
 // gear pos
 int gearX = 40;
@@ -63,6 +64,14 @@ int bestTimeY = 40;
 int lastTimeX = 250;
 int lastTimeY = 100;
 
+// fuel pos
+int fuelX = 250;
+int fuelY = 100;
+
+// position pos
+int positionX = 250;
+int positionY = 40;
+
 // declare strings
 String delta;
 String deltaPrew;
@@ -70,12 +79,17 @@ String bestTime;
 String bestTimePrew;
 String lastTime;
 String lastTimePrew;
+String position;
+String positionPrew;
+String fuel;
+String fuelPrew;
 String dataString, rpm, rpmMax;
-String gears[8] = {"R", "N", "1", "2", "3", "4", "5", "6"};
+String gears[10] = {"R", "N", "1", "2", "3", "4", "5", "6","7","8"};
 
 // menu variables
 int menuPage = 0;
-int maxMenuPage = 2;
+int maxMenuPage = 3;
+int prewMenuPage = 0;
 
 // define tft
 ILI9488 tft = ILI9488(TFT_CS, TFT_DC, TFT_RST);
@@ -130,10 +144,12 @@ void loop() {
     // assign to correct variable the unpacked data
     gear = (dataString.substring(delimiters[0] + 1, delimiters[1])).toInt();
     delta = dataString.substring(delimiters[1] + 1, delimiters[2]);
-    rpm = dataString.substring(delimiters[2] + 1, delimiters[3]);
-    rpmMax = dataString.substring(delimiters[3] + 1, delimiters[4]);
-    bestTime = dataString.substring(delimiters[4] + 1, delimiters[5]);
-    lastTime = dataString.substring(delimiters[5] + 1, delimiters[6]);
+    fuel = dataString.substring(delimiters[2] + 1, delimiters[3]);
+    rpm = dataString.substring(delimiters[3] + 1, delimiters[4]);
+    rpmMax = dataString.substring(delimiters[4] + 1, delimiters[5]);
+    bestTime = dataString.substring(delimiters[5] + 1, delimiters[6]);
+    lastTime = dataString.substring(delimiters[6] + 1, delimiters[7]);
+    position = dataString.substring(delimiters[7] + 1, delimiters[8]);
     //compute percentage
     percInt = (rpm.toInt() * 100 ) / rpmMax.toInt();
     // led on-off
@@ -150,10 +166,12 @@ void loop() {
     // timeSinceLastClick is to avoid a multiple click in a limited part of time, buttonWasReleased is necessary to avoid click before releasing the button
     if(millis() - timeSinceLastClick > timeThresholdButton && button1WasReleased == true) {
       button1WasReleased = false;
-      if(menuPage > -1) {
-        menuPage -= 1;
-        hasJustChangedMenu0 = true;
+      prewMenuPage = menuPage;
+      menuPage -= 1;
+      if(menuPage < 0) {
+        menuPage = maxMenuPage - 1;
       }
+      hasJustChangedMenu = true;
       delay(1); // this delay is necessary to avoid double increment of n1
       timeSinceLastClick = millis();
     }
@@ -167,10 +185,12 @@ void loop() {
   if(digitalRead(button2) == LOW) {
     if(millis() - timeSinceLastClick > timeThresholdButton && button2WasReleased == true) {
       button2WasReleased = false;
-      if(menuPage < (maxMenuPage - 1)){
-        menuPage += 1;
-        hasJustChangedMenu1 = true;
+      prewMenuPage = menuPage;
+      menuPage += 1;
+      if(menuPage > maxMenuPage - 1){
+        menuPage = 0;
       }
+      hasJustChangedMenu = true;
       delay(1);
       timeSinceLastClick = millis();
     }
@@ -197,12 +217,19 @@ void loop() {
 
   if(menuPage == 0) {
     // first time after changing menu I need to clean all the old data, in this case I remove deltaPrew and after I write best time and lastTime
-    if( hasJustChangedMenu1 == true ) {
-      textPrint(deltaPrew, deltaX, deltaY, textSizeDelta, ILI9488_BLACK);
+    if( hasJustChangedMenu == true && prewMenuPage == 1) {
+      clear1();
       textPrint(bestTime, bestTimeX, bestTimeY, textSizeTime, ILI9488_WHITE);
       textPrint(lastTime, lastTimeX, lastTimeY, textSizeTime, ILI9488_WHITE);
-      hasJustChangedMenu1 = false;
+      hasJustChangedMenu = false;
     }
+
+    if( hasJustChangedMenu == true && prewMenuPage == 2) {
+      clear2();
+      textPrint(bestTime, bestTimeX, bestTimeY, textSizeTime, ILI9488_WHITE);
+      textPrint(lastTime, lastTimeX, lastTimeY, textSizeTime, ILI9488_WHITE);
+      hasJustChangedMenu = false;
+    }    
 
     // in the other situation I clean only the old value, in this case I clean the prewious best time and I write the new best time
     if(bestTime != bestTimePrew) {
@@ -219,27 +246,65 @@ void loop() {
   }
 
   else if(menuPage == 1) {
-    if( hasJustChangedMenu0 == true ) {
-      textPrint(bestTimePrew, bestTimeX, bestTimeY, textSizeTime, ILI9488_BLACK);
-      textPrint(lastTimePrew, lastTimeX, lastTimeY, textSizeTime, ILI9488_BLACK);
+    if( hasJustChangedMenu == true && prewMenuPage == 0) {
+      clear0();
       if(delta.charAt(0) == '-') {
         textPrint(delta, deltaX, deltaY, textSizeDelta, ILI9488_GREEN);
       }
       else{
         textPrint(delta, deltaX, deltaY, textSizeDelta, ILI9488_RED);
       }
-      hasJustChangedMenu0 = false;
+      hasJustChangedMenu = false;
+    }
+
+    if( hasJustChangedMenu == true && prewMenuPage == 2) {
+      clear2();
+      if(delta.charAt(0) == '-') {
+        textPrint(delta, deltaX, deltaY, textSizeDelta, ILI9488_GREEN);
+      }
+      else{
+        textPrint(delta, deltaX, deltaY, textSizeDelta, ILI9488_RED);
+      }
+      hasJustChangedMenu = false;
     }
 
     if( delta != deltaPrew ){
-      textPrint(deltaPrew, deltaX, deltaY, 4, ILI9488_BLACK);
+      textPrint(deltaPrew, deltaX, deltaY, textSizeDelta, ILI9488_BLACK);
       if(delta.charAt(0) == '-') {
-        textPrint(delta, deltaX, deltaY, 4, ILI9488_GREEN);
+        textPrint(delta, deltaX, deltaY, textSizeDelta, ILI9488_GREEN);
       }
       else{
-        textPrint(delta, deltaX, deltaY, 4, ILI9488_RED);
+        textPrint(delta, deltaX, deltaY, textSizeDelta, ILI9488_RED);
       }
       deltaPrew = delta;
+    }
+  }
+
+  else if(menuPage == 2){
+    if( hasJustChangedMenu == true && prewMenuPage == 0) {
+      clear0();
+      textPrint(fuel, fuelX, fuelY, textSizeFuel, ILI9488_WHITE);
+      textPrint(position, positionX, positionY, textSizePosition, ILI9488_WHITE);
+      hasJustChangedMenu = false;
+    }
+
+    if( hasJustChangedMenu == true && prewMenuPage == 1) {
+      clear1();
+      textPrint(fuel, fuelX, fuelY, textSizeFuel, ILI9488_WHITE);
+      textPrint(position, positionX, positionY, textSizePosition, ILI9488_WHITE);      
+      hasJustChangedMenu = false;
+    }
+
+    if(fuel != fuelPrew){
+      textPrint(fuel, fuelX, fuelY, textSizeFuel, ILI9488_BLACK);
+      textPrint(fuel, fuelX, fuelY, textSizeFuel, ILI9488_WHITE);
+      fuelPrew = fuel;
+    }
+
+    if(position != positionPrew){
+      textPrint(position, positionX, positionY, textSizePosition, ILI9488_BLACK);
+      textPrint(position, positionX, positionY, textSizePosition, ILI9488_WHITE);
+      positionPrew = position;
     }
   }
 }
@@ -276,4 +341,19 @@ void textPrint(String text, int x, int y, int size, int color) {
   tft.setTextColor(color);
   tft.setTextSize(size);
   tft.println(text);
+}
+
+void clear0(){
+  textPrint(bestTimePrew, bestTimeX, bestTimeY, textSizeTime, ILI9488_BLACK);
+  textPrint(lastTimePrew, lastTimeX, lastTimeY, textSizeTime, ILI9488_BLACK);
+}
+
+void clear1(){
+  textPrint(deltaPrew, deltaX, deltaY, textSizeDelta, ILI9488_BLACK);
+  delay(30); 
+}
+
+void clear2(){
+  textPrint(fuel, fuelX, fuelY, textSizeFuel, ILI9488_BLACK);
+  textPrint(position, positionX, positionY, textSizePosition, ILI9488_BLACK);
 }
