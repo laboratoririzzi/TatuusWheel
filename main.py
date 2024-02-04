@@ -210,7 +210,7 @@ class SPageFilePhysics(Structure):
 
 	def toDict(self):
 		return {
-			str(self.gear) + "|" + f'{self.performanceMeter:.3f}' + "|"  + str(self.fuel) + "|" + str(self.rpms),
+			str(self.gear) + "|" + f'{self.performanceMeter:.3f}' + "|"  + f'{self.fuel:.1f}' + "|" + str(self.rpms),
 		}
 
 def read_physics():
@@ -240,3 +240,4 @@ while True:
 	arduino.write(str(dataStr).encode('utf-8'))
 	print(dataStr)
 	time.sleep(0.2)
+	
