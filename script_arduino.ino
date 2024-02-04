@@ -296,13 +296,13 @@ void loop() {
     }
 
     if(fuel != fuelPrew){
-      textPrint(fuel, fuelX, fuelY, textSizeFuel, ILI9488_BLACK);
+      textPrint(fuelPrew, fuelX, fuelY, textSizeFuel, ILI9488_BLACK);
       textPrint(fuel, fuelX, fuelY, textSizeFuel, ILI9488_WHITE);
       fuelPrew = fuel;
     }
 
     if(position != positionPrew){
-      textPrint(position, positionX, positionY, textSizePosition, ILI9488_BLACK);
+      textPrint(positionPrew, positionX, positionY, textSizePosition, ILI9488_BLACK);
       textPrint(position, positionX, positionY, textSizePosition, ILI9488_WHITE);
       positionPrew = position;
     }
@@ -354,6 +354,6 @@ void clear1(){
 }
 
 void clear2(){
-  textPrint(fuel, fuelX, fuelY, textSizeFuel, ILI9488_BLACK);
-  textPrint(position, positionX, positionY, textSizePosition, ILI9488_BLACK);
+  textPrint(fuelPrew, fuelX, fuelY, textSizeFuel, ILI9488_BLACK);
+  textPrint(positionPrew, positionX, positionY, textSizePosition, ILI9488_BLACK);
 }
